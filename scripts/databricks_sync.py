@@ -160,6 +160,21 @@ def _init_schema(engine) -> None:
         conn.commit()
 
 
+def _matches_table_exists(engine) -> bool:
+    query = text(
+        """
+        SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = current_schema()
+              AND table_name = 'matches'
+        )
+        """
+    )
+    with engine.connect() as conn:
+        return bool(conn.execute(query).scalar())
+
+
 def _fetch_matches(token: str, competition: str) -> list[dict[str, Any]]:
     from worldcup_pool.football_data import normalize_match
 
@@ -230,7 +245,10 @@ def main() -> None:
     comp = (os.environ.get("FOOTBALL_DATA_COMPETITION", "WC") or "WC").strip()
 
     engine = _get_engine()
-    _init_schema(engine)
+    if _matches_table_exists(engine):
+        logger.info("Skipping schema init; matches table already exists")
+    else:
+        _init_schema(engine)
     rows = _fetch_matches(token, comp)
     now = datetime.now(timezone.utc)
 
