@@ -224,21 +224,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--football-data-competition", default="")
     parser.add_argument("--lakebase-database", default="")
     parser.add_argument("--prediction-lock-before-kickoff-hours", default="")
-    parser.add_argument("--football-data-token", default="")
     return parser.parse_args()
-
-
-def _maybe_decode_base64(value: str) -> str:
-    candidate = value.strip()
-
-    try:
-        candidate = base64.b64decode(candidate).decode()
-    except (binascii.Error, UnicodeDecodeError, ValueError):
-        logger.error(f"Failed to decode FOOTBALL_DATA_TOKEN from {value}")
-        return value
-
-    logger.info("Using decoded FOOTBALL_DATA_TOKEN from base64 input")
-    return candidate
 
 
 def main() -> None:
@@ -254,10 +240,12 @@ def main() -> None:
     if args.prediction_lock_before_kickoff_hours.strip():
         os.environ["PREDICTION_LOCK_BEFORE_KICKOFF_HOURS"] = args.prediction_lock_before_kickoff_hours.strip()
 
-    token = (args.football_data_token or os.environ.get("FOOTBALL_DATA_TOKEN", "")).strip()
+    token = os.environ.get("FOOTBALL_DATA_TOKEN", "").strip()
+    if not token:
+        w = WorkspaceClient()
+        token = w.dbutils.secrets.get(scope="worldcup_pool", key="football_data_token")
     if not token:
         raise SystemExit("FOOTBALL_DATA_TOKEN is required for sync job")
-    token = _maybe_decode_base64(token)
         
     comp = (os.environ.get("FOOTBALL_DATA_COMPETITION", "WC") or "WC").strip()
 

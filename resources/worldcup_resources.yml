@@ -41,8 +41,6 @@ resources:
               - "databricks_postgres"
               - "--prediction-lock-before-kickoff-hours"
               - "1"
-              - "--football-data-token"
-              - "{{secrets/worldcup_pool/football_data_token}}"
 
         # Lakebase → UC Delta mirror for the AI/BI dashboard + Genie demo.
         # Runs after sync_matches so the snapshot is consistent with the latest
