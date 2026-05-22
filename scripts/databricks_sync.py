@@ -230,26 +230,15 @@ def _parse_args() -> argparse.Namespace:
 
 def _maybe_decode_base64(value: str) -> str:
     candidate = value.strip()
-    if not candidate:
-        return candidate
 
-    # Accept missing padding but require a strict base64 round-trip.
-    padded = candidate + ("=" * ((4 - (len(candidate) % 4)) % 4))
     try:
-        decoded_bytes = base64.b64decode(padded, validate=True)
-        decoded = decoded_bytes.decode("utf-8").strip()
+        candidate = base64.b64decode(candidate).decode()
     except (binascii.Error, UnicodeDecodeError, ValueError):
-        return candidate
-
-    if not decoded:
-        return candidate
-
-    encoded = base64.b64encode(decoded.encode("utf-8")).decode("ascii")
-    if encoded.rstrip("=") != candidate.rstrip("="):
-        return candidate
+        logger.error(f"Failed to decode FOOTBALL_DATA_TOKEN from {value}")
+        return value
 
     logger.info("Using decoded FOOTBALL_DATA_TOKEN from base64 input")
-    return decoded
+    return candidate
 
 
 def main() -> None:
