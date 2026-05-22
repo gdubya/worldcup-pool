@@ -9,6 +9,8 @@ does not require a wheel of the app package on the driver PYTHONPATH.
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import logging
 import os
 import sys
@@ -226,6 +228,30 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _maybe_decode_base64(value: str) -> str:
+    candidate = value.strip()
+    if not candidate:
+        return candidate
+
+    # Accept missing padding but require a strict base64 round-trip.
+    padded = candidate + ("=" * ((4 - (len(candidate) % 4)) % 4))
+    try:
+        decoded_bytes = base64.b64decode(padded, validate=True)
+        decoded = decoded_bytes.decode("utf-8").strip()
+    except (binascii.Error, UnicodeDecodeError, ValueError):
+        return candidate
+
+    if not decoded:
+        return candidate
+
+    encoded = base64.b64encode(decoded.encode("utf-8")).decode("ascii")
+    if encoded.rstrip("=") != candidate.rstrip("="):
+        return candidate
+
+    logger.info("Using decoded FOOTBALL_DATA_TOKEN from base64 input")
+    return decoded
+
+
 def main() -> None:
     args = _parse_args()
 
@@ -242,6 +268,8 @@ def main() -> None:
     token = (args.football_data_token or os.environ.get("FOOTBALL_DATA_TOKEN", "")).strip()
     if not token:
         raise SystemExit("FOOTBALL_DATA_TOKEN is required for sync job")
+    token = _maybe_decode_base64(token)
+        
     comp = (os.environ.get("FOOTBALL_DATA_COMPETITION", "WC") or "WC").strip()
 
     engine = _get_engine()
