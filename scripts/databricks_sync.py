@@ -2,12 +2,13 @@
 """
 Databricks Job entry: sync fixtures/results into Lakebase Autoscaling.
 
-Self-contained (uses only job `libraries` PyPI deps + this file) so spark_python_task
+Self-contained (uses only serverless environment PyPI deps + this file) so spark_python_task
 does not require a wheel of the app package on the driver PYTHONPATH.
 """
 
 from __future__ import annotations
 
+import argparse
 import logging
 import os
 import sys
@@ -200,11 +201,33 @@ def _fetch_matches(token: str, competition: str) -> list[dict[str, Any]]:
     return out
 
 
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Sync football-data matches into Lakebase")
+    parser.add_argument("--lakebase-endpoint", default="")
+    parser.add_argument("--football-data-competition", default="")
+    parser.add_argument("--lakebase-database", default="")
+    parser.add_argument("--prediction-lock-before-kickoff-hours", default="")
+    parser.add_argument("--football-data-token", default="")
+    return parser.parse_args()
+
+
 def main() -> None:
-    token = os.environ.get("FOOTBALL_DATA_TOKEN", "").strip()
+    args = _parse_args()
+
+    # Prefer explicit task parameters on serverless jobs, keep env-var fallback.
+    if args.lakebase_endpoint.strip():
+        os.environ["LAKEBASE_ENDPOINT"] = args.lakebase_endpoint.strip()
+    if args.football_data_competition.strip():
+        os.environ["FOOTBALL_DATA_COMPETITION"] = args.football_data_competition.strip()
+    if args.lakebase_database.strip():
+        os.environ["LAKEBASE_DATABASE"] = args.lakebase_database.strip()
+    if args.prediction_lock_before_kickoff_hours.strip():
+        os.environ["PREDICTION_LOCK_BEFORE_KICKOFF_HOURS"] = args.prediction_lock_before_kickoff_hours.strip()
+
+    token = (args.football_data_token or os.environ.get("FOOTBALL_DATA_TOKEN", "")).strip()
     if not token:
         raise SystemExit("FOOTBALL_DATA_TOKEN is required for sync job")
-    comp = os.environ.get("FOOTBALL_DATA_COMPETITION", "WC").strip()
+    comp = (os.environ.get("FOOTBALL_DATA_COMPETITION", "WC") or "WC").strip()
 
     engine = _get_engine()
     _init_schema(engine)

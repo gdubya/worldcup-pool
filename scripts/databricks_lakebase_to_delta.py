@@ -21,6 +21,7 @@ Self-contained on purpose — `spark_python_task` does not need a wheel of the
 
 from __future__ import annotations
 
+import argparse
 import logging
 import os
 import sys
@@ -39,6 +40,15 @@ logger = logging.getLogger(__name__)
 
 _CRED_LOCK = threading.Lock()
 _engine_cache: dict[str, Any] = {"engine": None, "exp": 0.0, "endpoint": None}
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Mirror Lakebase tables into Unity Catalog Delta")
+    parser.add_argument("--lakebase-endpoint", default="")
+    parser.add_argument("--lakebase-database", default="")
+    parser.add_argument("--demo-catalog", default="")
+    parser.add_argument("--demo-schema", default="")
+    return parser.parse_args()
 
 
 def _get_engine():
@@ -194,6 +204,18 @@ def _copy_table(
 
 
 def main() -> None:
+    args = _parse_args()
+
+    # Prefer explicit task parameters on serverless jobs, keep env-var fallback.
+    if args.lakebase_endpoint.strip():
+        os.environ["LAKEBASE_ENDPOINT"] = args.lakebase_endpoint.strip()
+    if args.lakebase_database.strip():
+        os.environ["LAKEBASE_DATABASE"] = args.lakebase_database.strip()
+    if args.demo_catalog.strip():
+        os.environ["DEMO_CATALOG"] = args.demo_catalog.strip()
+    if args.demo_schema.strip():
+        os.environ["DEMO_SCHEMA"] = args.demo_schema.strip()
+
     catalog = (os.environ.get("DEMO_CATALOG") or "main").strip() or "main"
     schema = (os.environ.get("DEMO_SCHEMA") or "worldcup_pool").strip() or "worldcup_pool"
 
