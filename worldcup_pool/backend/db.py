@@ -45,8 +45,11 @@ def _refresh_engine_if_needed() -> Engine:
     if settings.database_url_override:
         with _CRED_LOCK:
             if _cached.get("override_engine") is None:
+                url = settings.database_url_override
+                if url.startswith("postgresql://"):
+                    url = "postgresql+psycopg://" + url[len("postgresql://"):]
                 _cached["override_engine"] = create_engine(
-                    settings.database_url_override,
+                    url,
                     **_pool_kwargs(),
                 )
             return _cached["override_engine"]

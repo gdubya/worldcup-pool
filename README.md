@@ -209,6 +209,19 @@ cd ui && npm ci && npm run dev
 
 Without a football-data token, call `POST /api/dev/seed-demo-matches` to populate sample data.
 
+### Authentication in Local Dev
+By default, when `WORLDCUP_DEV_CORS=1` or `DATABASE_URL_OVERRIDE` is set, the backend will automatically mock a user session using the first email configured in `ADMIN_EMAILS` (or `dev@example.com` if none is configured). This gives you full admin/user access out of the box.
+
+If you need to test the UI with a different user identity or switch between users, you can generate a mock JWT and store it in `ui/.env`:
+1. Generate a mock token:
+   ```bash
+   uv run python -c "import jwt; print(jwt.encode({'email': 'test-user@example.com', 'sub': 'user-sub-id'}, 'secret', algorithm='HS256'))"
+   ```
+2. Save it to `ui/.env`:
+   ```env
+   VITE_DEV_ACCESS_TOKEN=your_generated_jwt_token
+   ```
+
 ### Scaling
 
 Budget roughly `WEB_CONCURRENCY x (DB_POOL_SIZE + DB_MAX_OVERFLOW)` connections. Keep that under your Lakebase connection limit. Match prediction saves use batch upserts for efficiency.

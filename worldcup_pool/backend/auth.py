@@ -17,6 +17,22 @@ def get_user_context(request: Request) -> UserContext:  # FastAPI injects Reques
     """Identify user from Databricks Apps forwarded access token (JWT payload)."""
     token = request.headers.get("x-forwarded-access-token")
     if not token:
+        import os
+        from worldcup_pool.backend.config import get_settings
+
+        is_dev = (
+            os.getenv("WORLDCUP_DEV_CORS", "").lower() in ("1", "true", "yes")
+            or bool(get_settings().database_url_override)
+        )
+        if is_dev:
+            settings = get_settings()
+            email = "dev@example.com"
+            if settings.admin_emails:
+                emails = [e.strip() for e in settings.admin_emails.split(",") if e.strip()]
+                if emails:
+                    email = emails[0]
+            return UserContext(user_id=email.lower(), email=email, sub="dev-sub-id")
+
         raise HTTPException(status_code=401, detail="Missing x-forwarded-access-token")
 
     try:
