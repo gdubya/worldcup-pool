@@ -60,7 +60,10 @@ variables:
   # deploy will fail until this is set -- either here in a target override or
   # via `databricks bundle deploy -t dev --var dashboard_warehouse_id=<id>`.
   admin_emails:
-    description: Comma-separated admin emails (set in target or at deploy time)
+    # For a single admin you can pass `--var admin_emails=you@company.com` on the CLI.
+    # For multiple admins, set this in a target's `variables:` block below (the
+    # Databricks CLI does not reliably forward comma-separated values through `--var`).
+    description: Comma-separated admin emails. For >1 admin, set in target.variables, not via --var.
     default: ""
   dashboard_warehouse_id:
     description: SQL warehouse ID the demo dashboard queries against
@@ -71,6 +74,10 @@ targets:
     default: true
     mode: development
     # Set dashboard_warehouse_id via: databricks bundle deploy -t dev --var dashboard_warehouse_id=<YOUR_ID>
+    # To run with multiple admins, uncomment and edit the block below. Commas in
+    # this YAML value are fine; commas in `--var admin_emails=...` are not.
+    # variables:
+    #   admin_emails: "alice@company.com,bob@company.com"
 
   simulation:
     mode: development

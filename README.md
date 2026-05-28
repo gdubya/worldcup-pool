@@ -101,10 +101,28 @@ databricks bundle run worldcup_pool_app -t dev
 
 > **Step 3 — admin emails must be set at deploy time.** `--var admin_emails`
 > writes `ADMIN_EMAILS` into the app environment so you can access admin
-> endpoints (config, logo upload, manual sync). For multiple admins, pass a
-> comma-separated list: `--var admin_emails=alice@x.com,bob@x.com`. You can
-> re-run `bundle deploy` with a different value any time; the script in the
-> next step is idempotent so it won't redo work.
+> endpoints (config, logo upload, manual sync). You can re-run `bundle deploy`
+> with a different value any time; the script in the next step is idempotent
+> so it won't redo work.
+>
+> **For multiple admins, set the value in `databricks.yml` instead of via
+> `--var`.** The Databricks CLI doesn't reliably forward comma-separated
+> values through the `--var` flag, so passing
+> `--var admin_emails=alice@x.com,bob@x.com` ends up with only the first
+> address taking effect. Open `databricks.yml`, find your target (e.g. `dev`)
+> under `targets:`, and add an `admin_emails` entry to its `variables:` block:
+>
+> ```yaml
+> targets:
+>   dev:
+>     default: true
+>     mode: development
+>     variables:
+>       admin_emails: "alice@company.com,bob@company.com"
+> ```
+>
+> Then deploy without `--var admin_emails`: `databricks bundle deploy -t dev`.
+> Commit this change to your fork so future deploys keep the same admin list.
 
 > **Why step 4?** The Databricks App runs as its own service principal.
 > Lakebase requires that SP to be registered as a Postgres OAuth role and
