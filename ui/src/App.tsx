@@ -125,7 +125,7 @@ function useDarkMode() {
 
 /* ---- Flag-enhanced team display ---- */
 function TeamName({ code, name, className }: { code: string; name: string; className?: string }) {
-  const flag = teamFlag(code);
+  const flag = teamFlag(canonicalTeamTla(code));
   return (
     <>
       {flag && <span className="team-flag" aria-hidden="true">{flag}</span>}

@@ -7,6 +7,7 @@ const TEAM_TLA_CANONICAL: Record<string, string> = {
   DEU: "GER",
   HOL: "NED",
   SCT: "SCO",
+  URY: "URU",
 };
 
 export function canonicalTeamTla(raw: string | null | undefined): string {

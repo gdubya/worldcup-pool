@@ -31,6 +31,7 @@ const CANONICAL_TEAM_TLA: Record<string, string> = {
   DEU: "GER",
   HOL: "NED",
   SCT: "SCO",
+  URY: "URU",
 };
 
 function canonicalTeamTla(code: string): string {
@@ -114,16 +115,18 @@ export type StandingRow = {
 
 function h2hOrder(a: string, b: string, matches: MatchOut[], draft: DraftScores): number {
   const m = matches.find(
-    (x) =>
-      (x.home_team_code === a && x.away_team_code === b) ||
-      (x.home_team_code === b && x.away_team_code === a),
+    (x) => {
+      const hc = canonicalTeamTla(x.home_team_code);
+      const ac = canonicalTeamTla(x.away_team_code);
+      return (hc === a && ac === b) || (hc === b && ac === a);
+    },
   );
   if (!m) return 0;
   const line = draftLine(draft, m.id);
   if (!line) return 0;
   const dh = line.home;
   const da = line.away;
-  if (m.home_team_code === a) {
+  if (canonicalTeamTla(m.home_team_code) === a) {
     if (dh > da) return -1;
     if (dh < da) return 1;
     return 0;
@@ -137,8 +140,8 @@ function h2hOrder(a: string, b: string, matches: MatchOut[], draft: DraftScores)
 export function deriveRosterFromGroupMatches(matches: MatchOut[]): RosterTeam[] {
   const seen = new Map<string, string>();
   for (const m of matches) {
-    seen.set(m.home_team_code, m.home_team_name);
-    seen.set(m.away_team_code, m.away_team_name);
+    seen.set(canonicalTeamTla(m.home_team_code), m.home_team_name);
+    seen.set(canonicalTeamTla(m.away_team_code), m.away_team_name);
   }
   return [...seen.entries()]
     .map(([team_code, team_name]) => ({ team_code, team_name }))
@@ -147,7 +150,7 @@ export function deriveRosterFromGroupMatches(matches: MatchOut[]): RosterTeam[] 
 
 function filterIntraRosterMatches(matches: MatchOut[], rosterCodes: Set<string>): MatchOut[] {
   return matches.filter(
-    (m) => rosterCodes.has(m.home_team_code) && rosterCodes.has(m.away_team_code),
+    (m) => rosterCodes.has(canonicalTeamTla(m.home_team_code)) && rosterCodes.has(canonicalTeamTla(m.away_team_code)),
   );
 }
 
@@ -194,18 +197,21 @@ export function computeStandingsFromPredictions(
   };
 
   if (roster && roster.length > 0) {
-    const codes = new Set(roster.map((r) => r.team_code));
+    const normalizedRoster = [...new Map(
+      roster.map((r) => [canonicalTeamTla(r.team_code), { ...r, team_code: canonicalTeamTla(r.team_code) }]),
+    ).values()];
+    const codes = new Set(normalizedRoster.map((r) => r.team_code));
     const intra = filterIntraRosterMatches(groupMatches, codes);
-    for (const r of roster) {
+    for (const r of normalizedRoster) {
       teams.set(r.team_code, { name: r.team_name, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 });
     }
     for (const m of intra) {
       const line = draftLine(draft, m.id);
       if (!line) continue;
-      bump(m.home_team_code, m.home_team_name, line.home, line.away);
-      bump(m.away_team_code, m.away_team_name, line.away, line.home);
+      bump(canonicalTeamTla(m.home_team_code), m.home_team_name, line.home, line.away);
+      bump(canonicalTeamTla(m.away_team_code), m.away_team_name, line.away, line.home);
     }
-    const rows: StandingRow[] = roster.map((r) => {
+    const rows: StandingRow[] = normalizedRoster.map((r) => {
       const t = teams.get(r.team_code)!;
       return {
         rank: 0,
